@@ -3,31 +3,34 @@
  * A gateway that demonstrates how to integrate with clients like Claude and OpenAI
  */
 
+import dotenv from "dotenv";
 import { Gateway } from "./gateway";
 import { Logger } from "./logger";
+import { getConfigFromEnv } from "./config";
+
+// Load environment variables
+dotenv.config();
 
 const logger = new Logger("Main");
+const config = getConfigFromEnv();
+const gracefulShutdown = process.env["NODE_ENV"] === "development" ? false : true;
 
 async function main(): Promise<void> {
   try {
     logger.info("Starting Ragie MCP Gateway...");
 
-    const gateway = new Gateway();
-    await gateway.initialize();
+    const gateway = new Gateway(config);
     await gateway.start();
 
     logger.info("Ragie MCP Gateway started successfully");
 
-    // Graceful shutdown handling
     process.on("SIGINT", async () => {
-      logger.info("Received SIGINT, shutting down gracefully...");
-      await gateway.stop();
-      process.exit(0);
-    });
-
-    process.on("SIGTERM", async () => {
-      logger.info("Received SIGTERM, shutting down gracefully...");
-      await gateway.stop();
+      if (gracefulShutdown) {
+        logger.info("Received SIGINT, shutting down gracefully...");
+        await gateway.stop();
+      } else {
+        logger.info("Received SIGINT, shutting down immediately...");
+      }
       process.exit(0);
     });
   } catch (error) {
@@ -43,5 +46,3 @@ if (require.main === module) {
     process.exit(1);
   });
 }
-
-export { Gateway, Logger };

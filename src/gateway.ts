@@ -3,45 +3,55 @@
  */
 
 import { EventEmitter } from "events";
+import express, { Request, Response, NextFunction } from "express";
+
+import { WorkOS } from "@workos-inc/node";
 import { Logger } from "./logger";
-import {
-  GatewayConfig,
-  ClientConnection,
-  GatewayStats,
-  MCPRequest,
-  MCPResponse,
-} from "./types";
+import { GatewayConfig } from "./config";
+import z from "zod";
+import cookieParser from "cookie-parser";
+import { Server } from "http";
 
 export class Gateway extends EventEmitter {
   private logger: Logger;
   private config: GatewayConfig;
-  private connections: Map<string, ClientConnection>;
   private isRunning: boolean;
-  private startTime: Date | null;
+  private app: express.Application;
+  private server: Server | null;
+  private workos: WorkOS;
 
-  constructor(config?: Partial<GatewayConfig>) {
+  constructor(config: GatewayConfig) {
     super();
 
-    this.config = {
-      port: 3000,
-      host: "localhost",
-      logLevel: "info",
-      maxConnections: 100,
-      timeout: 30000,
-      ...config,
-    };
+    this.config = config;
 
     this.logger = new Logger("Gateway", this.config.logLevel);
-    this.connections = new Map();
     this.isRunning = false;
-    this.startTime = null;
+    this.server = null;
+
+    this.workos = new WorkOS(this.config.workosApiKey, {
+      clientId: this.config.workosClientId,
+    });
+
+    this.app = express();
+    this.initializeApp();
   }
 
-  async initialize(): Promise<void> {
-    this.logger.info("Initializing Gateway...");
+  private initializeApp(): void {
+    this.app.use(cookieParser());
 
-    // Initialize any required services here
-    this.logger.info("Gateway initialized successfully");
+    // Request logging middleware
+    this.app.use((req: Request, _res: Response, next: NextFunction) => {
+      this.logger.debug(`Incoming request: ${req.method} ${req.url}`);
+      next();
+    });
+
+    this.app.get("/auth/login", this.handleLogin.bind(this));
+    this.app.get("/auth/callback", this.handleAuthCallback.bind(this));
+    this.app.get("/auth/logout", this.handleLogout.bind(this));
+    this.app.get("/{*splat}", this.authenticateRequest.bind(this), (req: Request, res: Response) => {
+      res.send("Hello World");
+    });
   }
 
   async start(): Promise<void> {
@@ -50,15 +60,23 @@ export class Gateway extends EventEmitter {
       return;
     }
 
-    this.logger.info(
-      `Starting Gateway on ${this.config.host}:${this.config.port}`
-    );
+    this.logger.info(`Starting Gateway on port ${this.config.port}`);
 
-    this.isRunning = true;
-    this.startTime = new Date();
+    return new Promise((resolve, reject) => {
+      this.server = this.app.listen(this.config.port, (error?: Error) => {
+        if (error) {
+          this.logger.error("Failed to start server:", error);
+          reject(error);
+          return;
+        }
 
-    this.emit("started");
-    this.logger.info("Gateway started successfully");
+        this.isRunning = true;
+
+        this.emit("started");
+        this.logger.info("Gateway started successfully");
+        resolve();
+      });
+    });
   }
 
   async stop(): Promise<void> {
@@ -69,114 +87,29 @@ export class Gateway extends EventEmitter {
 
     this.logger.info("Stopping Gateway...");
 
-    // Close all connections
-    for (const [id] of this.connections) {
-      await this.closeConnection(id);
-    }
+    return new Promise(resolve => {
+      if (this.server) {
+        if (this.server.listening) {
+          this.server.close((error?: Error) => {
+            if (error) {
+              this.logger.error("Failed to stop server:", error);
+              resolve(void 0);
+              return;
+            }
 
-    this.isRunning = false;
-    this.startTime = null;
-
-    this.emit("stopped");
-    this.logger.info("Gateway stopped successfully");
-  }
-
-  async processRequest(request: MCPRequest): Promise<MCPResponse> {
-    this.logger.debug("Processing request", {
-      requestId: request.id,
-      method: request.method,
+            this.isRunning = false;
+            this.emit("stopped");
+            this.logger.info("Gateway stopped successfully");
+            resolve(void 0);
+          });
+        }
+      } else {
+        this.isRunning = false;
+        this.emit("stopped");
+        this.logger.info("Gateway stopped successfully");
+        resolve(void 0);
+      }
     });
-
-    try {
-      // Simulate request processing
-      const result = await this.handleRequest(request);
-
-      const response: MCPResponse = {
-        id: request.id,
-        result,
-        timestamp: new Date(),
-      };
-
-      this.logger.debug("Request processed successfully", {
-        requestId: request.id,
-      });
-      return response;
-    } catch (error) {
-      this.logger.error("Error processing request", error, {
-        requestId: request.id,
-      });
-
-      const response: MCPResponse = {
-        id: request.id,
-        error: {
-          code: 500,
-          message: error instanceof Error ? error.message : "Unknown error",
-        },
-        timestamp: new Date(),
-      };
-
-      return response;
-    }
-  }
-
-  private async handleRequest(request: MCPRequest): Promise<unknown> {
-    // Implement specific request handling logic here
-    switch (request.method) {
-      case "ping":
-        return { message: "pong", timestamp: new Date() };
-
-      case "getStats":
-        return this.getStats();
-
-      case "getConnections":
-        return Array.from(this.connections.values());
-
-      default:
-        throw new Error(`Unknown method: ${request.method}`);
-    }
-  }
-
-  addConnection(connection: ClientConnection): void {
-    this.connections.set(connection.id, connection);
-    this.logger.info("New connection added", {
-      connectionId: connection.id,
-      type: connection.type,
-    });
-    this.emit("connectionAdded", connection);
-  }
-
-  removeConnection(connectionId: string): void {
-    const connection = this.connections.get(connectionId);
-    if (connection) {
-      this.connections.delete(connectionId);
-      this.logger.info("Connection removed", { connectionId });
-      this.emit("connectionRemoved", connection);
-    }
-  }
-
-  private async closeConnection(connectionId: string): Promise<void> {
-    const connection = this.connections.get(connectionId);
-    if (connection) {
-      connection.isActive = false;
-      this.logger.debug("Connection closed", { connectionId });
-      this.emit("connectionClosed", connection);
-    }
-  }
-
-  getStats(): GatewayStats {
-    const activeConnections = Array.from(this.connections.values()).filter(
-      conn => conn.isActive
-    ).length;
-
-    const uptime = this.startTime ? Date.now() - this.startTime.getTime() : 0;
-
-    return {
-      totalConnections: this.connections.size,
-      activeConnections,
-      totalRequests: 0, // This would be tracked in a real implementation
-      uptime,
-      memoryUsage: process.memoryUsage(),
-    };
   }
 
   getConfig(): GatewayConfig {
@@ -185,5 +118,118 @@ export class Gateway extends EventEmitter {
 
   isActive(): boolean {
     return this.isRunning;
+  }
+
+  private async handleLogin(_req: Request, res: Response): Promise<void> {
+    const authorizationUrl = this.workos.sso.getAuthorizationUrl({
+      organization: this.config.workosOrganization,
+      redirectUri: this.config.workosRedirectUri,
+      clientId: this.config.workosClientId,
+    });
+
+    res.redirect(authorizationUrl);
+  }
+
+  private async handleAuthCallback(req: Request, res: Response): Promise<void> {
+    const result = z.string().safeParse(req.query["code"]);
+
+    if (!result.success) {
+      res.status(400).send("No code provided");
+      return;
+    }
+
+    const code = result.data;
+
+    try {
+      const authenticateResponse = await this.workos.userManagement.authenticateWithCode({
+        clientId: this.config.workosClientId,
+        code,
+        session: {
+          sealSession: true,
+          cookiePassword: this.config.workosCookiePassword,
+        },
+      });
+
+      const { user, sealedSession } = authenticateResponse;
+
+      console.log({ user });
+
+      // Store the session in a cookie
+      res.cookie("wos-session", sealedSession, {
+        path: "/",
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+      });
+
+      // Use the information in `user` for further business logic.
+
+      // Redirect the user to the homepage
+      res.redirect("/");
+      return;
+    } catch (error) {
+      console.log({ error });
+      res.redirect("/auth/login");
+      return;
+    }
+  }
+
+  private async handleLogout(req: Request, res: Response): Promise<void> {
+    if (!req.cookies["wos-session"]) {
+      res.send("Already logged out");
+      return;
+    }
+
+    const session = this.workos.userManagement.loadSealedSession({
+      sessionData: req.cookies["wos-session"],
+      cookiePassword: this.config.workosCookiePassword,
+    });
+
+    res.clearCookie("wos-session");
+    res.send("Logged out successfully");
+  }
+
+  // Authentication middleware
+  private async authenticateRequest(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const session = this.workos.userManagement.loadSealedSession({
+      sessionData: req.cookies["wos-session"],
+      cookiePassword: this.config.workosCookiePassword,
+    });
+
+    const auth = await session.authenticate();
+
+    if (auth.authenticated) {
+      return next();
+    }
+
+    // If the cookie is missing, redirect to login
+    if (!auth.authenticated && auth.reason === "no_session_cookie_provided") {
+      return res.redirect("/auth/login");
+    }
+
+    // If the session is invalid, attempt to refresh
+    try {
+      const auth = await session.refresh();
+
+      if (!auth.authenticated) {
+        return res.redirect("/auth/login");
+      }
+
+      // update the cookie
+      res.cookie("wos-session", auth.sealedSession, {
+        path: "/",
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+      });
+
+      // Redirect to the same route to ensure the updated cookie is used
+      return res.redirect(req.originalUrl);
+    } catch (e) {
+      // Failed to refresh access token, redirect user to login page
+      // after deleting the cookie
+      res.clearCookie("wos-session");
+      res.redirect("/auth/login");
+    }
   }
 }

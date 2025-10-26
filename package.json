@@ -15,9 +15,8 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "dev": "tsc --watch",
+    "dev": "ts-node src/index.ts",
     "start": "node dist/index.js",
-    "dev:start": "ts-node src/index.ts",
     "clean": "rm -rf dist",
     "prebuild": "npm run clean",
     "lint": "eslint src/**/*.ts",
@@ -27,7 +26,18 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
   },
+  "dependencies": {
+    "@types/cookie-parser": "^1.4.10",
+    "@workos-inc/node": "^7.71.0",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "jiti": "^2.6.1",
+    "zod": "^4.1.12"
+  },
   "devDependencies": {
+    "@types/express": "^5.0.4",
+    "@types/jest": "^30.0.0",
     "@types/node": "^24.0.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
@@ -35,9 +45,8 @@
     "eslint-config-prettier": "^10.0.0",
     "eslint-plugin-prettier": "^5.0.0",
     "jest": "^30.0.0",
-    "@types/jest": "^30.0.0",
-    "ts-jest": "^29.0.0",
     "prettier": "^3.0.0",
+    "ts-jest": "^29.0.0",
     "ts-node": "^10.0.0",
     "typescript": "^5.0.0"
   }

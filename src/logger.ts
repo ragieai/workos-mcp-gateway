@@ -2,8 +2,6 @@
  * Logger utility for the Ragie MCP Gateway
  */
 
-import { LogLevel, LogEntry } from "./types";
-
 export class Logger {
   private context: string;
   private logLevel: LogLevel;
@@ -23,11 +21,7 @@ export class Logger {
     return levels[level] >= levels[this.logLevel];
   }
 
-  private formatLog(
-    level: LogLevel,
-    message: string,
-    metadata?: Record<string, unknown>
-  ): LogEntry {
+  private formatLog(level: LogLevel, message: string, metadata?: Record<string, unknown>): LogEntry {
     return {
       level,
       message,
@@ -51,7 +45,7 @@ export class Logger {
         console.debug(logMessage);
         break;
       case "info":
-        console.info(logMessage);
+        console.log(logMessage);
         break;
       case "warn":
         console.warn(logMessage);
@@ -74,11 +68,7 @@ export class Logger {
     this.output(this.formatLog("warn", message, metadata));
   }
 
-  error(
-    message: string,
-    error?: unknown,
-    metadata?: Record<string, unknown>
-  ): void {
+  error(message: string, error?: unknown, metadata?: Record<string, unknown>): void {
     const errorMetadata =
       error instanceof Error
         ? { error: error.message, stack: error.stack, ...metadata }
@@ -90,4 +80,14 @@ export class Logger {
   setLogLevel(level: LogLevel): void {
     this.logLevel = level;
   }
+}
+
+export type LogLevel = "debug" | "info" | "warn" | "error";
+
+export interface LogEntry {
+  level: LogLevel;
+  message: string;
+  timestamp: Date;
+  context?: string;
+  metadata?: Record<string, unknown>;
 }
