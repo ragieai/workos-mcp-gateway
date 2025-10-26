@@ -11,14 +11,13 @@ describe("Gateway", () => {
     gateway = new Gateway({
       port: 3002,
       logLevel: "error", // Reduce log noise during tests
-      maxConnections: 100,
-      timeout: 30000,
+      ragieApiKey: "ragie_api_key",
+      ragieMcpServerUrl: "ragie_mcp_server_url",
       workosApiKey: "workos_api_key",
       workosClientId: "workos_client_id",
       workosCookiePassword: "workos_cookie_password",
       workosRedirectUri: "workos_redirect_uri",
       workosOrganization: "workos_organization",
-      targetMcpServerUrl: "target_mcp_server_url",
     });
   });
 
