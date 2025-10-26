@@ -11,6 +11,7 @@ import { GatewayConfig } from "./config";
 import z from "zod";
 import cookieParser from "cookie-parser";
 import { Server } from "http";
+import { createProxyMiddleware } from "http-proxy-middleware";
 
 export class Gateway extends EventEmitter {
   private logger: Logger;
@@ -49,9 +50,21 @@ export class Gateway extends EventEmitter {
     this.app.get("/auth/login", this.handleLogin.bind(this));
     this.app.get("/auth/callback", this.handleAuthCallback.bind(this));
     this.app.get("/auth/logout", this.handleLogout.bind(this));
-    this.app.get("/{*splat}", this.authenticateRequest.bind(this), (req: Request, res: Response) => {
+    this.app.get("/", this.authenticateRequest.bind(this), (req: Request, res: Response) => {
       res.send("Hello World");
     });
+
+    const proxyMiddleware = createProxyMiddleware({
+      target: this.config.ragieMcpServerUrl,
+      changeOrigin: true,
+      on: {
+        proxyReq: (req, res) => {
+          req.setHeader("Authorization", `Bearer ${this.config.ragieApiKey}`);
+        },
+      },
+    });
+
+    this.app.use("/mcp", proxyMiddleware);
   }
 
   async start(): Promise<void> {
