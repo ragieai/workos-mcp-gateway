@@ -1,5 +1,6 @@
 import { EventEmitter } from "events";
 import express, { Request, Response, NextFunction } from "express";
+import { URL } from "url";
 
 import { WorkOS } from "@workos-inc/node";
 import { Logger } from "./logger";
