@@ -17,12 +17,12 @@ const gracefulShutdown = process.env["NODE_ENV"] === "development" ? false : tru
 
 async function main(): Promise<void> {
   try {
-    logger.info("Starting Ragie MCP Gateway...");
+    logger.info("Starting MCP Gateway...");
 
     const gateway = new Gateway(config);
     await gateway.start();
 
-    logger.info("Ragie MCP Gateway started successfully");
+    logger.info("MCP Gateway started successfully");
 
     process.on("SIGINT", async () => {
       if (gracefulShutdown) {
