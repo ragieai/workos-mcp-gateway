@@ -59,9 +59,6 @@ export class Gateway extends EventEmitter {
     this.app.get("/auth/login", this.handleLogin.bind(this));
     this.app.get("/auth/callback", this.handleAuthCallback.bind(this));
     this.app.get("/auth/logout", this.handleLogout.bind(this));
-    this.app.get("/", this.authenticateRequest.bind(this), (req: Request, res: Response) => {
-      res.send("Hello World");
-    });
 
     const proxyMiddleware = createProxyMiddleware({
       target: this.config.ragieMcpServerUrl,
@@ -223,7 +220,7 @@ export class Gateway extends EventEmitter {
       // Use the information in `user` for further business logic.
 
       // Redirect the user to the homepage
-      res.redirect("/");
+      res.redirect("/mcp");
       return;
     } catch (error) {
       console.log({ error });
