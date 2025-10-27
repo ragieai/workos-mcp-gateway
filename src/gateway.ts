@@ -1,7 +1,3 @@
-/**
- * Main Gateway class for the Ragie MCP Gateway
- */
-
 import { EventEmitter } from "events";
 import express, { Request, Response, NextFunction } from "express";
 
@@ -12,7 +8,6 @@ import z from "zod";
 import cookieParser from "cookie-parser";
 import { Server } from "http";
 import { createProxyMiddleware } from "http-proxy-middleware";
-
 import { jwtVerify, createRemoteJWKSet } from "jose";
 
 export class Gateway extends EventEmitter {
@@ -25,7 +20,7 @@ export class Gateway extends EventEmitter {
   private wwwAuthenticateHeader: string;
   private workosJwks: ReturnType<typeof createRemoteJWKSet>;
 
-  constructor(config: GatewayConfig) {
+  constructor(config: GatewayConfig, workos: WorkOS | null = null) {
     super();
 
     this.config = config;
@@ -34,9 +29,11 @@ export class Gateway extends EventEmitter {
     this.isRunning = false;
     this.server = null;
 
-    this.workos = new WorkOS(this.config.workosApiKey, {
-      clientId: this.config.workosClientId,
-    });
+    this.workos =
+      workos ??
+      new WorkOS(this.config.workosApiKey, {
+        clientId: this.config.workosClientId,
+      });
 
     this.wwwAuthenticateHeader = [
       'Bearer error="unauthorized"',
