@@ -8,6 +8,9 @@ const config: Config = {
   transform: {
     "^.+\\.ts$": "ts-jest",
   },
+  moduleNameMapper: {
+    "^jose$": "<rootDir>/src/__tests__/__mocks__/jose.ts",
+  },
   collectCoverageFrom: [
     "src/**/*.ts",
     "!src/**/*.d.ts",

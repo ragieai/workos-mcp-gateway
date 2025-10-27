@@ -9,11 +9,13 @@ describe("Gateway", () => {
 
   beforeEach(() => {
     gateway = new Gateway({
+      baseUrl: "http://localhost:3000",
       port: 3002,
       logLevel: "error", // Reduce log noise during tests
       ragieApiKey: "ragie_api_key",
       ragieMcpServerUrl: "ragie_mcp_server_url",
       workosApiKey: "workos_api_key",
+      workosAuthorizationServerUrl: "https://placeholder.authkit.app",
       workosClientId: "workos_client_id",
       workosCookiePassword: "workos_cookie_password",
       workosRedirectUri: "workos_redirect_uri",
