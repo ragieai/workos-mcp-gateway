@@ -13,6 +13,8 @@ import cookieParser from "cookie-parser";
 import { Server } from "http";
 import { createProxyMiddleware } from "http-proxy-middleware";
 
+import { jwtVerify, createRemoteJWKSet } from "jose";
+
 export class Gateway extends EventEmitter {
   private logger: Logger;
   private config: GatewayConfig;
@@ -20,6 +22,8 @@ export class Gateway extends EventEmitter {
   private app: express.Application;
   private server: Server | null;
   private workos: WorkOS;
+  private wwwAuthenticateHeader: string;
+  private workosJwks: ReturnType<typeof createRemoteJWKSet>;
 
   constructor(config: GatewayConfig) {
     super();
@@ -33,6 +37,14 @@ export class Gateway extends EventEmitter {
     this.workos = new WorkOS(this.config.workosApiKey, {
       clientId: this.config.workosClientId,
     });
+
+    this.wwwAuthenticateHeader = [
+      'Bearer error="unauthorized"',
+      'error_description="Authorization needed"',
+      `resource_metadata="${this.config.baseUrl}/.well-known/oauth-protected-resource"`,
+    ].join(", ");
+
+    this.workosJwks = createRemoteJWKSet(new URL(this.config.workosAuthorizationServerUrl + "/oauth2/jwks"));
 
     this.app = express();
     this.initializeApp();
@@ -64,7 +76,43 @@ export class Gateway extends EventEmitter {
       },
     });
 
-    this.app.use("/mcp", proxyMiddleware);
+    this.app.use("/mcp", this.bearerTokenMiddleware.bind(this), proxyMiddleware);
+    this.app.get("/.well-known/oauth-protected-resource", (req, res) =>
+      res.json({
+        resource: `${this.config.baseUrl}/mcp`,
+        authorization_servers: [this.config.workosAuthorizationServerUrl],
+        bearer_methods_supported: ["header"],
+      })
+    );
+    this.app.get("/.well-known/oauth-authorization-server", async (_req, res) => {
+      const response = await fetch(
+        `${this.config.workosAuthorizationServerUrl}/.well-known/oauth-authorization-server`
+      );
+      const metadata = await response.json();
+
+      res.json(metadata);
+    });
+  }
+
+  async bearerTokenMiddleware(req: Request, res: Response, next: NextFunction) {
+    const token = req.headers.authorization?.match(/^Bearer (.+)$/)?.[1];
+    if (!token) {
+      res.set("WWW-Authenticate", this.wwwAuthenticateHeader).status(401).json({ error: "No token provided." });
+      return;
+    }
+
+    try {
+      const { payload } = await jwtVerify(token, this.workosJwks, {
+        issuer: this.config.workosAuthorizationServerUrl,
+      });
+
+      // Use access token claims to populate request context.
+      // i.e. `req.userId = payload.sub;`
+
+      next();
+    } catch (err) {
+      res.set("WWW-Authenticate", this.wwwAuthenticateHeader).status(401).json({ error: "Invalid bearer token." });
+    }
   }
 
   async start(): Promise<void> {
