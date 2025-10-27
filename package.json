@@ -1,10 +1,12 @@
 {
-  "name": "@ragieai/ragie-mcp-gateway",
+  "name": "@ragieai/oauth-mcp-gateway",
   "version": "1.0.0",
-  "description": "A Ragie MCP server gateway that demonstrates how to integrate with clients like Claude And OpenAI",
+  "description": "An MCP gateway for the Ragie Model Context Protocol server that implements OAuth using WorkOS",
   "keywords": [
     "Ragie",
     "MCP",
+    "OAuth",
+    "WorkOS",
     "Claude",
     "OpenAI",
     "Anthropic"
