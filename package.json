@@ -29,9 +29,7 @@
     "test:coverage": "jest --coverage"
   },
   "dependencies": {
-    "@types/cookie-parser": "^1.4.10",
     "@workos-inc/node": "^7.71.0",
-    "cookie-parser": "^1.4.7",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "http-proxy-middleware": "^3.0.5",
