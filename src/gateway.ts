@@ -60,7 +60,14 @@ export class Gateway extends EventEmitter {
         logger: this.logger,
         changeOrigin: true,
         pathRewrite: (_path, req) => {
-          return `/mcp/${req.params.organizationId.toLowerCase()}/`;
+          const organizationId = req.params.organizationId;
+          const partition = this.config.mapping?.[organizationId];
+          if (partition) {
+            this.logger.debug(`Using mapping for organization ${organizationId}: ${partition}`);
+            return `/mcp/${partition}/`;
+          } else {
+            return `/mcp/${organizationId.toLowerCase()}/`;
+          }
         },
         on: {
           proxyReq: req => {

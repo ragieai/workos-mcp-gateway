@@ -9,6 +9,7 @@ export interface GatewayConfig {
   workosApiKey: string;
   workosAuthorizationServerUrl: string;
   workosClientId: string;
+  mapping?: Record<string, string>;
 }
 
 export function getConfigFromEnv(): GatewayConfig {
