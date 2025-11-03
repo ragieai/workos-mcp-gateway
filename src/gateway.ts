@@ -52,17 +52,23 @@ export class Gateway extends EventEmitter {
       next();
     });
 
-    const proxyMiddleware = createProxyMiddleware({
-      target: this.config.ragieMcpServerUrl,
-      changeOrigin: true,
-      on: {
-        proxyReq: req => {
-          req.setHeader("Authorization", `Bearer ${this.config.ragieApiKey}`);
+    this.app.use(
+      "/:organizationId/mcp",
+      this.bearerTokenMiddleware.bind(this),
+      createProxyMiddleware<Request<{ organizationId: string }>>({
+        target: this.config.ragieMcpServerUrl,
+        logger: this.logger,
+        changeOrigin: true,
+        pathRewrite: (_path, req) => {
+          return `/mcp/${req.params.organizationId.toLowerCase()}/`;
         },
-      },
-    });
-
-    this.app.use("/:organizationId/mcp", this.bearerTokenMiddleware.bind(this), proxyMiddleware);
+        on: {
+          proxyReq: req => {
+            req.setHeader("Authorization", `Bearer ${this.config.ragieApiKey}`);
+          },
+        },
+      })
+    );
 
     this.app.get("/.well-known/oauth-protected-resource", (req, res) =>
       res.json({
