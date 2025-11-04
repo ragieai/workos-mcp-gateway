@@ -1,25 +1,27 @@
 # WorkOS MCP Gateway
 
-An MCP (Model Context Protocol) gateway for the Ragie Model Context Protocol server that implements OAuth authentication using WorkOS. This gateway enables secure access to Ragie's MCP services through OAuth 2.0 authentication flows.
+A multi-tenant MCP (Model Context Protocol) gateway for the Ragie Model Context Protocol server that implements bearer token authentication using WorkOS. This gateway enables secure, organization-based access to Ragie's MCP services through JWT token validation and organization membership verification.
 
 ## Overview
 
 This gateway acts as a secure proxy between AI clients (like Claude, OpenAI, or Anthropic) and the Ragie MCP server. It provides:
 
-- **OAuth 2.0 Authentication**: Secure user authentication via WorkOS
-- **Bearer Token Validation**: JWT token verification for API access
-- **Session Management**: Secure cookie-based session handling
+- **Bearer Token Authentication**: JWT token verification via WorkOS JWKS
+- **Organization-Based Routing**: Multi-tenant routing with organization-scoped endpoints
+- **Organization Membership Validation**: Verifies user membership in organizations via WorkOS
+- **Optional Partition Mapping**: Maps organization IDs to Ragie partitions for flexible routing
 - **Proxy Functionality**: Transparent forwarding of authenticated requests to Ragie MCP services
-- **Well-Known Endpoints**: OAuth discovery endpoints for client integration
+- **OAuth Discovery Endpoints**: Well-known endpoints for OAuth metadata discovery
 
 ## Features
 
-- 🔐 **Secure Authentication**: OAuth 2.0 flow with WorkOS integration
-- 🛡️ **JWT Token Validation**: Automatic verification of bearer tokens
-- 🍪 **Session Management**: Secure HTTP-only cookie sessions
+- 🔐 **Bearer Token Authentication**: JWT token verification using WorkOS JWKS
+- 🏢 **Multi-Tenant Architecture**: Organization-based routing and access control
+- ✅ **Membership Validation**: Automatic verification of user membership in organizations
+- 🗺️ **Flexible Routing**: Optional organization-to-partition mapping support
 - 🔄 **Request Proxying**: Seamless forwarding to Ragie MCP services
 - 📋 **OAuth Discovery**: Well-known endpoints for OAuth metadata
-- 🚀 **Production Ready**: Graceful shutdown, error handling, and logging
+- 🚀 **Production Ready**: Graceful shutdown, error handling, and structured logging
 - 🧪 **Test Coverage**: Comprehensive test suite with Jest
 
 ## Prerequisites
@@ -66,9 +68,6 @@ The gateway requires several environment variables to be configured:
 - `WORKOS_API_KEY`: Your WorkOS API key
 - `WORKOS_AUTHORIZATION_SERVER_URL`: Your WorkOS AuthKit authorization server URL
 - `WORKOS_CLIENT_ID`: Your WorkOS application client ID
-- `WORKOS_REDIRECT_URI`: The callback URL for OAuth flow (typically `{BASE_URL}/auth/callback`)
-- `WORKOS_COOKIE_PASSWORD`: A secure random string for session encryption (generate with `openssl rand -hex 32`)
-- `WORKOS_ORGANIZATION`: Your WorkOS organization ID
 
 ### Optional Variables
 
@@ -78,71 +77,97 @@ The gateway requires several environment variables to be configured:
 
 ## Usage
 
-### Development
+### Basic Usage
 
-Start the development server with hot reloading:
+Start the gateway server:
+```bash
+npm start
+```
+
+Or in development mode with hot reloading:
 ```bash
 npm run dev
 ```
 
-### Production
+### Organization Mapping
 
-Build and start the production server:
-```bash
-npm run build
-npm start
+The gateway supports optional organization-to-partition mapping for flexible routing. Create a JSON mapping file:
+
+```json
+{
+  "org_01K8BHJC61A42KN38TB98HZHTQ": "soc2",
+  "org_01K8BHJC61A42KN38TB98HZHTQ2": "custom-partition"
+}
 ```
 
-### Testing
-
-Run the test suite:
+Start the gateway with mapping:
 ```bash
-npm test
+npm start -- --mapping-file mapping.json
 ```
 
-Run tests with coverage:
+Or use the short form:
 ```bash
-npm run test:coverage
+npm start -- -m mapping.json
 ```
+
+### Strict Mapping Mode
+
+When strict mapping is enabled, only organizations defined in the mapping file are allowed. Requests to unmapped organizations will return a 404 error:
+
+```bash
+npm start -- --mapping-file mapping.json --strict-mapping
+```
+
+Or use the short form:
+```bash
+npm start -- -m mapping.json -s
+```
+
+### CLI Arguments
+
+- `--mapping-file` or `-m`: Path to the organization mapping JSON file
+- `--strict-mapping` or `-s`: Enable strict mapping mode (requires `--mapping-file`)
 
 ## API Endpoints
-
-### Authentication Endpoints
-
-- `GET /auth/login` - Initiates OAuth login flow
-- `GET /auth/callback` - OAuth callback handler
-- `GET /auth/logout` - Logs out the user
 
 ### OAuth Discovery Endpoints
 
 - `GET /.well-known/oauth-protected-resource` - Returns OAuth protected resource metadata
-- `GET /.well-known/oauth-authorization-server` - Returns OAuth authorization server metadata
+- `GET /.well-known/oauth-authorization-server` - Returns OAuth authorization server metadata (proxied from WorkOS)
 
 ### Protected Endpoints
 
-- `/*/mcp` - Proxies requests to Ragie MCP server (requires bearer token)
+- `GET /:organizationId/mcp/*` - Proxies requests to Ragie MCP server (requires bearer token)
+
+### Path Rewriting
+
+When a mapping is configured, organization IDs are mapped to partitions:
+- Without mapping: `/org_123/mcp/...` → `/mcp/org_123/...`
+- With mapping: `/org_123/mcp/...` → `/mcp/soc2/...` (if `org_123` maps to `soc2`)
+
+Organization IDs are automatically lowercased when no mapping exists.
 
 ## Authentication Flow
 
-1. **User Login**: Users are redirected to `/auth/login` which initiates the WorkOS OAuth flow
-2. **OAuth Callback**: After authentication, WorkOS redirects to `/auth/callback` with an authorization code
-3. **Session Creation**: The gateway exchanges the code for tokens and creates a secure session cookie
-4. **API Access**: Clients can access MCP endpoints using bearer tokens validated against WorkOS JWKS
+1. **Client obtains JWT**: Clients authenticate with WorkOS and receive a JWT bearer token
+2. **Bearer Token**: Clients include the token in the `Authorization: Bearer <token>` header
+3. **Token Verification**: The gateway verifies the JWT signature using WorkOS JWKS
+4. **Membership Validation**: The gateway verifies the user is an active member of the requested organization
+5. **Request Proxying**: Authenticated requests are proxied to the Ragie MCP server with the Ragie API key
 
 ## Security Features
 
-- **HTTP-Only Cookies**: Session cookies are not accessible via JavaScript
-- **Secure Cookies**: Cookies are only sent over HTTPS in production
-- **SameSite Protection**: CSRF protection via SameSite cookie attribute
-- **JWT Verification**: All bearer tokens are cryptographically verified
-- **Token Refresh**: Automatic session refresh when tokens expire
+- **JWT Verification**: All bearer tokens are cryptographically verified using WorkOS JWKS
+- **Organization Membership**: Users must be active members of the organization they're accessing
+- **API Key Injection**: Ragie API key is automatically injected in proxied requests
+- **Error Handling**: Proper HTTP status codes and WWW-Authenticate headers for auth failures
 
 ## Development
 
 ### Project Structure
 
 - **Gateway Class**: Main application logic and Express server setup
-- **Configuration**: Environment-based configuration management
+- **Configuration**: Environment-based configuration management with Zod validation
 - **Logger**: Structured logging with configurable levels
 - **Tests**: Comprehensive test coverage with mocked dependencies
 
@@ -161,12 +186,29 @@ npm run test:coverage
 
 ## Integration with AI Clients
 
-This gateway is designed to work with AI clients that support OAuth 2.0 and bearer token authentication. Clients should:
+This gateway is designed to work with AI clients that support bearer token authentication. Clients should:
 
-1. Discover OAuth endpoints via `/.well-known/oauth-protected-resource`
-2. Implement OAuth 2.0 authorization code flow
-3. Use bearer tokens for API requests to `/mcp/*` endpoints
-4. Handle token refresh when tokens expire
+1. Authenticate users with WorkOS to obtain JWT tokens
+2. Include bearer tokens in the `Authorization` header for all requests
+3. Specify the organization ID in the URL path: `/{organizationId}/mcp/*`
+4. Handle 401 responses with WWW-Authenticate headers for authentication errors
+5. Discover OAuth endpoints via `/.well-known/oauth-protected-resource` if needed
+
+### Example Request
+
+```bash
+curl -H "Authorization: Bearer <workos-jwt-token>" \
+  https://gateway.example.com/org_123/mcp/retrieve
+```
+
+## Multi-Tenant Architecture
+
+The gateway supports multi-tenant access through organization-based routing:
+
+- Each organization has its own endpoint path
+- Users must be members of the organization to access its endpoints
+- Optional mapping allows organizations to share Ragie partitions
+- Strict mapping mode restricts access to only mapped organizations
 
 ## License
 
