@@ -18,14 +18,19 @@ dotenv.config();
 const logger = new Logger("Main");
 const gracefulShutdown = process.env["NODE_ENV"] === "development" ? false : true;
 
-function parseCommandLineArgs(): { mappingFile?: string } {
+function parseCommandLineArgs(): { mappingFile?: string; strictMapping?: boolean } {
   const args = minimist(process.argv.slice(2), {
     string: ["mapping-file", "m"],
-    alias: { "mapping-file": ["mappingFile", "m"] },
+    boolean: ["strict-mapping", "s"],
+    alias: {
+      "mapping-file": ["mappingFile", "m"],
+      "strict-mapping": ["strictMapping", "s"],
+    },
   });
 
   return {
     mappingFile: args["mapping-file"] || args["m"],
+    strictMapping: args["strict-mapping"] || args["s"],
   };
 }
 
@@ -44,56 +49,52 @@ function loadMappingFile(filePath: string): Record<string, string> {
   } catch (error) {
     if (error instanceof z.ZodError) {
       const errorMessages = error.issues.map(e => `${e.path.join(".")}: ${e.message}`).join(", ");
-      logger.error(`Invalid mapping file format: ${errorMessages}`);
       throw new Error(`Mapping file validation failed: ${errorMessages}`);
     }
-    logger.error(`Failed to load mapping file: ${error instanceof Error ? error.message : String(error)}`);
-    throw error;
+    if (error instanceof Error) {
+      throw new Error(`Failed to load mapping file: ${error.message}`);
+    }
+    throw new Error(`Failed to load mapping file: ${String(error)}`);
   }
 }
 
 async function main(): Promise<void> {
-  try {
-    logger.info("Starting MCP Gateway...");
+  logger.info("Starting MCP Gateway...");
 
-    const baseConfig = getConfigFromEnv();
-    const cliArgs = parseCommandLineArgs();
+  const baseConfig = getConfigFromEnv();
+  const cliArgs = parseCommandLineArgs();
 
-    let config: GatewayConfig = baseConfig;
-
-    // Load mapping file if provided
-    if (cliArgs.mappingFile) {
-      const mapping = loadMappingFile(cliArgs.mappingFile);
-      config = {
-        ...baseConfig,
-        mapping,
-      };
-    }
-
-    const gateway = new Gateway(config);
-    await gateway.start();
-
-    logger.info("MCP Gateway started successfully");
-
-    process.on("SIGINT", async () => {
-      if (gracefulShutdown) {
-        logger.info("Received SIGINT, shutting down gracefully...");
-        await gateway.stop();
-      } else {
-        logger.info("Received SIGINT, shutting down immediately...");
-      }
-      process.exit(0);
-    });
-  } catch (error) {
-    logger.error("Failed to start Ragie MCP Gateway:", error);
-    process.exit(1);
+  if (cliArgs.strictMapping && !cliArgs.mappingFile) {
+    throw new Error("The --strict-mapping flag requires --mapping-file to be specified");
   }
+
+  let config: GatewayConfig = baseConfig;
+
+  if (cliArgs.mappingFile) {
+    const mapping = loadMappingFile(cliArgs.mappingFile);
+    config = { ...baseConfig, mapping, strictMapping: !!cliArgs.strictMapping };
+  }
+
+  const gateway = new Gateway(config);
+  await gateway.start();
+
+  logger.info("MCP Gateway started successfully");
+
+  process.on("SIGINT", async () => {
+    if (gracefulShutdown) {
+      logger.info("Received SIGINT, shutting down gracefully...");
+      await gateway.stop();
+    } else {
+      logger.info("Received SIGINT, shutting down immediately...");
+    }
+    process.exit(0);
+  });
 }
 
 // Start the application
 if (require.main === module) {
   main().catch(error => {
-    logger.error("Unhandled error in main:", error);
+    logger.error(error);
     process.exit(1);
   });
 }

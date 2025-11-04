@@ -10,6 +10,7 @@ export interface GatewayConfig {
   workosAuthorizationServerUrl: string;
   workosClientId: string;
   mapping?: Record<string, string>;
+  strictMapping?: boolean;
 }
 
 export function getConfigFromEnv(): GatewayConfig {
