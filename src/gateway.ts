@@ -54,6 +54,7 @@ export class Gateway extends EventEmitter {
 
     this.app.use(
       "/:organizationId/mcp",
+      this.strictMappingMiddleware.bind(this),
       this.bearerTokenMiddleware.bind(this),
       createProxyMiddleware<Request<{ organizationId: string }>>({
         target: this.config.ragieMcpServerUrl,
@@ -93,6 +94,22 @@ export class Gateway extends EventEmitter {
 
       res.json(metadata);
     });
+  }
+
+  strictMappingMiddleware(req: Request<{ organizationId: string }>, res: Response, next: NextFunction) {
+    if (!this.config.strictMapping) {
+      next();
+      return;
+    }
+
+    const organizationId = req.params.organizationId;
+    const hasMapping = this.config.mapping?.hasOwnProperty(organizationId);
+    if (!hasMapping) {
+      this.logger.warn(`No mapping found for organization ${organizationId} and strict mapping is enabled`);
+      res.status(404).json({ error: "Organization not found" });
+      return;
+    }
+    next();
   }
 
   async bearerTokenMiddleware(req: Request<{ organizationId: string }>, res: Response, next: NextFunction) {
