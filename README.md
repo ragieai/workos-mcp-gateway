@@ -1,4 +1,4 @@
-# WorkOS MCP Gateway
+# Ragie MCP Gateway
 
 A multi-tenant MCP (Model Context Protocol) gateway for the Ragie Model Context Protocol server that implements bearer token authentication using WorkOS. This gateway enables secure, organization-based access to Ragie's MCP services through JWT token validation and organization membership verification.
 
@@ -36,7 +36,7 @@ This gateway acts as a secure proxy between AI clients (like Claude, OpenAI, or 
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd workos-mcp-gateway
+cd mcp-gateway
 ```
 
 2. Install dependencies:
