@@ -1,6 +1,6 @@
 {
   "name": "@ragieai/mcp-gateway",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "An MCP gateway for the Ragie Model Context Protocol server that implements OAuth using WorkOS",
   "keywords": [
     "Ragie",
