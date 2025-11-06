@@ -8,7 +8,6 @@ import dotenv from "dotenv";
 import { Gateway } from "./gateway.js";
 import { Logger } from "./logger.js";
 import { getConfigFromEnv } from "./config.js";
-import { fileURLToPath } from "url";
 
 // Load environment variables
 dotenv.config();
@@ -37,9 +36,7 @@ async function main(): Promise<void> {
 }
 
 // Start the application
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  main().catch(error => {
-    logger.error(error);
-    process.exit(1);
-  });
-}
+main().catch(error => {
+  logger.error(error);
+  process.exit(1);
+});
