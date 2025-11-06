@@ -27,38 +27,85 @@ This gateway acts as a secure proxy between AI clients (like Claude, OpenAI, or 
 ## Prerequisites
 
 - Node.js 18+
-- npm or yarn
 - WorkOS account and application setup
 - Ragie API key and MCP server access
 
 ## Installation
 
-1. Clone the repository:
+### Using npx (Recommended)
+
+Run the gateway directly without installing:
+
 ```bash
+npx @ragieai/mcp-gateway
+```
+
+### Global Installation
+
+Install globally for system-wide access:
+
+```bash
+npm install -g @ragieai/mcp-gateway
+```
+
+Then run it from anywhere:
+
+```bash
+mcp-gateway
+```
+
+### Local Installation
+
+Install as a dependency in your project:
+
+```bash
+npm install @ragieai/mcp-gateway
+```
+
+Then run it with:
+
+```bash
+npx mcp-gateway
+```
+
+Or add it to your `package.json` scripts:
+
+```json
+{
+  "scripts": {
+    "start:gateway": "mcp-gateway"
+  }
+}
+```
+
+### Development Setup
+
+If you want to contribute or customize the gateway:
+
+```bash
+# Clone the repository
 git clone <repository-url>
 cd mcp-gateway
-```
 
-2. Install dependencies:
-```bash
+# Install dependencies
 npm install
-```
 
-3. Copy the environment template:
-```bash
+# Copy the environment template
 cp env.example .env
-```
 
-4. Configure your environment variables in `.env` (see Configuration section)
+# Configure your environment variables in .env (see Configuration section)
 
-5. Build the project:
-```bash
+# Build the project
 npm run build
 ```
 
 ## Configuration
 
-The gateway requires several environment variables to be configured:
+The gateway requires several environment variables to be configured. You can set these via:
+
+- Environment variables in your shell
+- A `.env` file in the current directory (loaded automatically)
+- Your deployment platform's environment configuration
 
 ### Required Variables
 
@@ -74,20 +121,37 @@ The gateway requires several environment variables to be configured:
 - `PORT`: Server port (defaults to 3000)
 - `LOG_LEVEL`: Logging level - debug, info, warn, or error (defaults to info)
 - `NODE_ENV`: Environment mode (development, production, etc.)
+- `MAPPING_FILE`: Path to a JSON file mapping organization IDs to Ragie partitions (optional)
+- `STRICT_MAPPING`: Enable strict mapping mode - only organizations in the mapping file are allowed (defaults to false, requires `MAPPING_FILE`)
+
+### Example `.env` File
+
+```bash
+BASE_URL=http://localhost:3000
+RAGIE_API_KEY=your_ragie_api_key_here
+RAGIE_MCP_SERVER_URL=https://api.ragie.ai/mcp/default
+WORKOS_API_KEY=your_workos_api_key_here
+WORKOS_AUTHORIZATION_SERVER_URL=https://api.workos.com/auth/v1
+WORKOS_CLIENT_ID=your_workos_client_id_here
+PORT=3000
+LOG_LEVEL=info
+NODE_ENV=production
+# Optional: Organization mapping
+MAPPING_FILE=mapping.json
+STRICT_MAPPING=false
+```
 
 ## Usage
 
 ### Basic Usage
 
-Start the gateway server:
+Run the gateway with default settings:
+
 ```bash
-npm start
+npx @ragieai/mcp-gateway
 ```
 
-Or in development mode with hot reloading:
-```bash
-npm run dev
-```
+The gateway will start on port 3000 (or the port specified in `PORT` environment variable).
 
 ### Organization Mapping
 
@@ -100,33 +164,46 @@ The gateway supports optional organization-to-partition mapping for flexible rou
 }
 ```
 
-Start the gateway with mapping:
+Set the `MAPPING_FILE` environment variable to enable mapping:
+
 ```bash
-npm start -- --mapping-file mapping.json
+MAPPING_FILE=mapping.json npx @ragieai/mcp-gateway
 ```
 
-Or use the short form:
+Or in your `.env` file:
+
 ```bash
-npm start -- -m mapping.json
+MAPPING_FILE=mapping.json
 ```
 
 ### Strict Mapping Mode
 
-When strict mapping is enabled, only organizations defined in the mapping file are allowed. Requests to unmapped organizations will return a 404 error:
+When strict mapping is enabled, only organizations defined in the mapping file are allowed. Requests to unmapped organizations will return a 404 error. Set `STRICT_MAPPING=true`:
 
 ```bash
-npm start -- --mapping-file mapping.json --strict-mapping
+MAPPING_FILE=mapping.json STRICT_MAPPING=true npx @ragieai/mcp-gateway
 ```
 
-Or use the short form:
+Or in your `.env` file:
+
 ```bash
-npm start -- -m mapping.json -s
+MAPPING_FILE=mapping.json
+STRICT_MAPPING=true
 ```
 
-### CLI Arguments
+### Example: Running with Environment Variables
 
-- `--mapping-file` or `-m`: Path to the organization mapping JSON file
-- `--strict-mapping` or `-s`: Enable strict mapping mode (requires `--mapping-file`)
+```bash
+BASE_URL=https://gateway.example.com \
+RAGIE_API_KEY=your_key \
+RAGIE_MCP_SERVER_URL=https://api.ragie.ai/mcp/default \
+WORKOS_API_KEY=your_workos_key \
+WORKOS_AUTHORIZATION_SERVER_URL=https://api.workos.com/auth/v1 \
+WORKOS_CLIENT_ID=your_client_id \
+MAPPING_FILE=mapping.json \
+STRICT_MAPPING=false \
+npx @ragieai/mcp-gateway
+```
 
 ## API Endpoints
 
@@ -175,7 +252,7 @@ Organization IDs are automatically lowercased when no mapping exists.
 
 - `npm run build` - Compile TypeScript to JavaScript
 - `npm run dev` - Start development server with hot reloading
-- `npm start` - Start production server
+- `npm start` - Start production server (after build)
 - `npm run clean` - Clean build artifacts
 - `npm run lint` - Run ESLint
 - `npm run lint:fix` - Fix ESLint issues
@@ -209,6 +286,29 @@ The gateway supports multi-tenant access through organization-based routing:
 - Users must be members of the organization to access its endpoints
 - Optional mapping allows organizations to share Ragie partitions
 - Strict mapping mode restricts access to only mapped organizations
+
+## Deployment
+
+The gateway can be deployed to any platform that supports Node.js:
+
+### Docker Deployment
+
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY dist ./dist
+ENV NODE_ENV=production
+CMD ["node", "dist/index.js"]
+```
+
+### Platform-Specific Guides
+
+- **Heroku**: Set environment variables in Heroku dashboard and deploy
+- **AWS Lambda**: Use AWS Lambda Node.js runtime with appropriate handler
+- **Kubernetes**: Deploy as a containerized service with ConfigMaps for environment variables
+- **Railway/Render/Fly.io**: Connect your repository and set environment variables
 
 ## License
 

@@ -2,7 +2,7 @@
  * Tests for the Gateway class
  */
 
-import { Gateway } from "../gateway";
+import { Gateway } from "../gateway.js";
 
 describe("Gateway", () => {
   let gateway: Gateway;

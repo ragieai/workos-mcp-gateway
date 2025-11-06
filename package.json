@@ -13,14 +13,23 @@
   ],
   "license": "MIT",
   "author": "",
-  "type": "commonjs",
+  "type": "module",
   "main": "dist/index.js",
+  "bin": {
+    "mcp-gateway": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
     "clean": "rm -rf dist",
     "prebuild": "npm run clean",
+    "prepublishOnly": "npm run build",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "format": "prettier --write src/**/*.ts",
@@ -35,13 +44,11 @@
     "http-proxy-middleware": "^3.0.5",
     "jiti": "^2.6.1",
     "jose": "^6.1.0",
-    "minimist": "^1.2.8",
     "zod": "^4.1.12"
   },
   "devDependencies": {
     "@types/express": "^5.0.4",
     "@types/jest": "^30.0.0",
-    "@types/minimist": "^1.2.5",
     "@types/node": "^24.0.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",

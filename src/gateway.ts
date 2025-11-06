@@ -2,8 +2,8 @@ import { EventEmitter } from "events";
 import express, { Request, Response, NextFunction } from "express";
 
 import { WorkOS } from "@workos-inc/node";
-import { Logger } from "./logger";
-import { GatewayConfig } from "./config";
+import { Logger } from "./logger.js";
+import { GatewayConfig } from "./config.js";
 import { Server } from "http";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { jwtVerify, createRemoteJWKSet } from "jose";
