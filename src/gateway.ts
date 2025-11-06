@@ -103,7 +103,7 @@ export class Gateway extends EventEmitter {
     }
 
     const organizationId = req.params.organizationId;
-    const hasMapping = this.config.mapping?.hasOwnProperty(organizationId);
+    const hasMapping = this.config.mapping?.[organizationId];
     if (!hasMapping) {
       this.logger.warn(`No mapping found for organization ${organizationId} and strict mapping is enabled`);
       res.status(404).json({ error: "Organization not found" });
