@@ -17,6 +17,7 @@ describe("Gateway", () => {
       workosApiKey: "workos_api_key",
       workosAuthorizationServerUrl: "https://placeholder.authkit.app",
       workosClientId: "workos_client_id",
+      strictMapping: false,
     });
   });
 
