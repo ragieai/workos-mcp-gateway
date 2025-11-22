@@ -62,17 +62,25 @@ export class Gateway extends EventEmitter {
         changeOrigin: true,
         pathRewrite: (_path, req) => {
           const organizationId = req.params.organizationId;
-          const partition = this.config.mapping?.[organizationId];
-          if (partition) {
-            this.logger.debug(`Using mapping for organization ${organizationId}: ${partition}`);
-            return `/mcp/${partition}/`;
+          const mapping = this.config.mapping?.[organizationId];
+          if (mapping) {
+            this.logger.debug(`Using mapping for organization ${organizationId}: ${mapping.partition}`);
+            return `/mcp/${mapping.partition}/`;
           } else {
             return `/mcp/${organizationId.toLowerCase()}/`;
           }
         },
         on: {
-          proxyReq: req => {
-            req.setHeader("Authorization", `Bearer ${this.config.ragieApiKey}`);
+          proxyReq: (proxyReq, req) => {
+            const organizationId = req.params.organizationId;
+            const mapping = this.config.mapping?.[organizationId];
+            if (mapping?.apiKey) {
+              this.logger.debug(`Using API key for organization ${organizationId}`);
+              proxyReq.setHeader("Authorization", `Bearer ${mapping.apiKey}`);
+            } else {
+              this.logger.debug(`Using default Ragie API key for organization ${organizationId}`);
+              proxyReq.setHeader("Authorization", `Bearer ${this.config.ragieApiKey}`);
+            }
           },
         },
       })

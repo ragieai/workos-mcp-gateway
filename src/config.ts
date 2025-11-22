@@ -19,19 +19,26 @@ export interface EnvironmentConfig extends BaseConfig {
   mappingFile?: string;
 }
 
+const MappingSchema = z.record(
+  z.string(),
+  z.object({
+    partition: z.string(),
+    apiKey: z.string().optional(),
+  })
+);
+
 export interface GatewayConfig extends BaseConfig {
-  mapping?: Record<string, string>;
+  mapping?: z.infer<typeof MappingSchema>;
 }
 
-function loadMappingFile(filePath: string, logger: Logger): Record<string, string> {
+function loadMappingFile(filePath: string, logger: Logger): z.infer<typeof MappingSchema> {
   try {
     const resolvedPath = resolve(filePath);
     logger.info(`Loading mapping file from: ${resolvedPath}`);
     const fileContents = readFileSync(resolvedPath, "utf-8");
     const rawData = JSON.parse(fileContents);
 
-    const mappingSchema = z.record(z.string(), z.string());
-    const mapping = mappingSchema.parse(rawData);
+    const mapping = MappingSchema.parse(rawData);
 
     logger.info(`Loaded ${Object.keys(mapping).length} organization mappings`);
     return mapping;
