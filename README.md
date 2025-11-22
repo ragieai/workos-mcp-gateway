@@ -9,7 +9,7 @@ This gateway acts as a secure proxy between AI clients (like Claude, OpenAI, or 
 - **Bearer Token Authentication**: JWT token verification via WorkOS JWKS
 - **Organization-Based Routing**: Multi-tenant routing with organization-scoped endpoints
 - **Organization Membership Validation**: Verifies user membership in organizations via WorkOS
-- **Optional Partition Mapping**: Maps organization IDs to Ragie partitions for flexible routing
+- **Optional Partition Mapping**: Maps organization IDs to Ragie partitions for flexible routing with optional per-organization API keys
 - **Proxy Functionality**: Transparent forwarding of authenticated requests to Ragie MCP services
 - **OAuth Discovery Endpoints**: Well-known endpoints for OAuth metadata discovery
 
@@ -18,7 +18,7 @@ This gateway acts as a secure proxy between AI clients (like Claude, OpenAI, or 
 - 🔐 **Bearer Token Authentication**: JWT token verification using WorkOS JWKS
 - 🏢 **Multi-Tenant Architecture**: Organization-based routing and access control
 - ✅ **Membership Validation**: Automatic verification of user membership in organizations
-- 🗺️ **Flexible Routing**: Optional organization-to-partition mapping support
+- 🗺️ **Flexible Routing**: Optional organization-to-partition mapping with per-organization API key support
 - 🔄 **Request Proxying**: Seamless forwarding to Ragie MCP services
 - 📋 **OAuth Discovery**: Well-known endpoints for OAuth metadata
 - 🚀 **Production Ready**: Graceful shutdown, error handling, and structured logging
@@ -137,8 +137,8 @@ PORT=3000
 LOG_LEVEL=info
 NODE_ENV=production
 # Optional: Organization mapping
-MAPPING_FILE=mapping.json
-STRICT_MAPPING=false
+# MAPPING_FILE=mapping.json
+# STRICT_MAPPING=false
 ```
 
 ## Usage
@@ -159,10 +159,19 @@ The gateway supports optional organization-to-partition mapping for flexible rou
 
 ```json
 {
-  "org_01K8BHJC61A42KN38TB98HZHTQ": "soc2",
-  "org_01K8BHJC61A42KN38TB98HZHTQ2": "custom-partition"
+  "org_A1A1A1A1A1A1A1A1A1A1A1A1A1": {
+    "partition": "soc2"
+  },
+  "org_B2B2B2B2B2B2B2B2B2B2B2B2B2": {
+    "partition": "custom-partition",
+    "apiKey": "optional_ragie_api_key_for_this_org"
+  }
 }
 ```
+
+Each organization mapping can include:
+- `partition` (required): The Ragie partition name to route to
+- `apiKey` (optional): A custom Ragie API key for this organization. If not provided, the default `RAGIE_API_KEY` will be used.
 
 Set the `MAPPING_FILE` environment variable to enable mapping:
 
@@ -220,9 +229,29 @@ npx @ragieai/mcp-gateway
 
 When a mapping is configured, organization IDs are mapped to partitions:
 - Without mapping: `/org_123/mcp/...` → `/mcp/org_123/...`
-- With mapping: `/org_123/mcp/...` → `/mcp/soc2/...` (if `org_123` maps to `soc2`)
+- With mapping: `/org_123/mcp/...` → `/mcp/soc2/...` (if `org_123` maps to partition `soc2`)
 
 Organization IDs are automatically lowercased when no mapping exists.
+
+### Per-Organization API Keys
+
+When using organization mapping, you can optionally specify a custom Ragie API key for each organization. This allows different organizations to use different Ragie API keys:
+
+```json
+{
+  "org_A1A1A1A1A1A1A1A1A1A1A1A1A1": {
+    "partition": "soc2",
+    "apiKey": "ragie_api_key_for_org_1"
+  },
+  "org_B2B2B2B2B2B2B2B2B2B2B2B2B2": {
+    "partition": "custom-partition"
+  }
+}
+```
+
+In the example above:
+- `org_A1A1A1A1A1A1A1A1A1A1A1A1A1` will use its custom API key
+- `org_B2B2B2B2B2B2B2B2B2B2B2B2B2` will use the default `RAGIE_API_KEY` from environment variables
 
 ## Authentication Flow
 
@@ -236,8 +265,9 @@ Organization IDs are automatically lowercased when no mapping exists.
 
 - **JWT Verification**: All bearer tokens are cryptographically verified using WorkOS JWKS
 - **Organization Membership**: Users must be active members of the organization they're accessing
-- **API Key Injection**: Ragie API key is automatically injected in proxied requests
+- **API Key Injection**: Ragie API key is automatically injected in proxied requests (default or per-organization)
 - **Error Handling**: Proper HTTP status codes and WWW-Authenticate headers for auth failures
+- **Strict Mapping**: Optional strict mode restricts access to only mapped organizations
 
 ## Development
 
@@ -254,6 +284,7 @@ Organization IDs are automatically lowercased when no mapping exists.
 - `npm run dev` - Start development server with hot reloading
 - `npm start` - Start production server (after build)
 - `npm run clean` - Clean build artifacts
+- `npm run typecheck` - Run typecheck
 - `npm run lint` - Run ESLint
 - `npm run lint:fix` - Fix ESLint issues
 - `npm run format` - Format code with Prettier
