@@ -116,7 +116,7 @@ The gateway requires several environment variables to be configured. You can set
 
 ### Optional Variables
 
-- `BASE_URL`: The public URL of your gateway server (defaults to `http://localhost:{PORT}` based on the bound hostname and port)
+- `BASE_URL`: The public URL of your gateway server (defaults to `http://localhost:{PORT}` where `{PORT}` is the configured port)
 - `PORT`: Server port (defaults to 3000)
 - `LOG_LEVEL`: Logging level - debug, info, warn, or error (defaults to info)
 - `LOG_FORMAT`: Log format - json or pretty (defaults to pretty)
@@ -132,6 +132,10 @@ RAGIE_API_KEY=your_ragie_api_key_here
 WORKOS_API_KEY=your_workos_api_key_here
 WORKOS_AUTHORIZATION_SERVER_URL=https://api.workos.com/auth/v1
 WORKOS_CLIENT_ID=your_workos_client_id_here
+
+# Optional: Base URL (defaults to http://localhost:{PORT} where {PORT} is the configured port)
+# BASE_URL=http://localhost:3000
+
 PORT=3000
 LOG_LEVEL=info
 LOG_FORMAT=pretty
