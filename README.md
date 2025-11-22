@@ -109,7 +109,6 @@ The gateway requires several environment variables to be configured. You can set
 
 ### Required Variables
 
-- `BASE_URL`: The public URL of your gateway server
 - `RAGIE_API_KEY`: Your Ragie API key for accessing MCP services
 - `WORKOS_API_KEY`: Your WorkOS API key
 - `WORKOS_AUTHORIZATION_SERVER_URL`: Your WorkOS AuthKit authorization server URL
@@ -117,6 +116,7 @@ The gateway requires several environment variables to be configured. You can set
 
 ### Optional Variables
 
+- `BASE_URL`: The public URL of your gateway server (defaults to `http://localhost:{PORT}` based on the bound hostname and port)
 - `PORT`: Server port (defaults to 3000)
 - `LOG_LEVEL`: Logging level - debug, info, warn, or error (defaults to info)
 - `LOG_FORMAT`: Log format - json or pretty (defaults to pretty)
@@ -128,7 +128,6 @@ The gateway requires several environment variables to be configured. You can set
 ### Example `.env` File
 
 ```bash
-BASE_URL=http://localhost:3000
 RAGIE_API_KEY=your_ragie_api_key_here
 WORKOS_API_KEY=your_workos_api_key_here
 WORKOS_AUTHORIZATION_SERVER_URL=https://api.workos.com/auth/v1

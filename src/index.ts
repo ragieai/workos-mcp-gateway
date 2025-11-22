@@ -17,8 +17,6 @@ const logger = createLogger("Main", config.logLevel, config.logFormat);
 const gracefulShutdown = process.env["NODE_ENV"] === "development" ? false : true;
 
 async function main(): Promise<void> {
-  logger.info("Starting MCP Gateway...");
-
   const gateway = new Gateway(config);
   await gateway.start();
 

@@ -58,7 +58,7 @@ function loadMappingFile(filePath: string, logger: winston.Logger): z.infer<type
 
 export function getConfigFromEnv(): GatewayConfig {
   const envVarSchema = z.object({
-    BASE_URL: z.string(),
+    BASE_URL: z.string().optional(),
     PORT: z.coerce.number().default(3000),
     LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
     LOG_FORMAT: z.enum(["json", "pretty"]).default("pretty"),
@@ -77,8 +77,11 @@ export function getConfigFromEnv(): GatewayConfig {
 
   const env = envVarSchema.parse(process.env);
 
+  // Default BASE_URL to localhost with the configured port if not provided
+  const baseUrl = env.BASE_URL || `http://localhost:${env.PORT}`;
+
   const baseConfig: BaseConfig = {
-    baseUrl: env.BASE_URL,
+    baseUrl,
     port: env.PORT,
     logLevel: env.LOG_LEVEL,
     logFormat: env.LOG_FORMAT,
