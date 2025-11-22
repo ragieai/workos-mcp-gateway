@@ -111,7 +111,6 @@ The gateway requires several environment variables to be configured. You can set
 
 - `BASE_URL`: The public URL of your gateway server
 - `RAGIE_API_KEY`: Your Ragie API key for accessing MCP services
-- `RAGIE_MCP_SERVER_URL`: The URL of the Ragie MCP server
 - `WORKOS_API_KEY`: Your WorkOS API key
 - `WORKOS_AUTHORIZATION_SERVER_URL`: Your WorkOS AuthKit authorization server URL
 - `WORKOS_CLIENT_ID`: Your WorkOS application client ID
@@ -122,6 +121,7 @@ The gateway requires several environment variables to be configured. You can set
 - `LOG_LEVEL`: Logging level - debug, info, warn, or error (defaults to info)
 - `LOG_FORMAT`: Log format - json or pretty (defaults to pretty)
 - `NODE_ENV`: Environment mode (development, production, etc.)
+- `RAGIE_BASE_URL`: Ragie API base URL (defaults to `https://api.ragie.ai/`)
 - `MAPPING_FILE`: Path to a JSON file mapping organization IDs to Ragie partitions (optional)
 - `STRICT_MAPPING`: Enable strict mapping mode - only organizations in the mapping file are allowed (defaults to false, requires `MAPPING_FILE`)
 
@@ -130,7 +130,6 @@ The gateway requires several environment variables to be configured. You can set
 ```bash
 BASE_URL=http://localhost:3000
 RAGIE_API_KEY=your_ragie_api_key_here
-RAGIE_MCP_SERVER_URL=https://api.ragie.ai/mcp/default
 WORKOS_API_KEY=your_workos_api_key_here
 WORKOS_AUTHORIZATION_SERVER_URL=https://api.workos.com/auth/v1
 WORKOS_CLIENT_ID=your_workos_client_id_here
@@ -138,6 +137,8 @@ PORT=3000
 LOG_LEVEL=info
 LOG_FORMAT=pretty
 NODE_ENV=production
+# Optional: Ragie API base URL (defaults to https://api.ragie.ai/)
+# RAGIE_BASE_URL=https://api.ragie.ai/
 # Optional: Organization mapping
 # MAPPING_FILE=mapping.json
 # STRICT_MAPPING=false
@@ -207,7 +208,6 @@ STRICT_MAPPING=true
 ```bash
 BASE_URL=https://gateway.example.com \
 RAGIE_API_KEY=your_key \
-RAGIE_MCP_SERVER_URL=https://api.ragie.ai/mcp/default \
 WORKOS_API_KEY=your_workos_key \
 WORKOS_AUTHORIZATION_SERVER_URL=https://api.workos.com/auth/v1 \
 WORKOS_CLIENT_ID=your_client_id \
@@ -230,11 +230,11 @@ npx @ragieai/mcp-gateway
 
 ### Path Rewriting
 
-When a mapping is configured, organization IDs are mapped to partitions:
-- Without mapping: `/org_123/mcp/...` → `/mcp/org_123/...`
+The gateway rewrites paths when proxying to the Ragie MCP server:
+- Without mapping: `/org_123/mcp/...` → `/mcp/org_123/...` (organization ID is lowercased)
 - With mapping: `/org_123/mcp/...` → `/mcp/soc2/...` (if `org_123` maps to partition `soc2`)
 
-Organization IDs are automatically lowercased when no mapping exists.
+The gateway constructs the target URL by combining `RAGIE_BASE_URL` with the rewritten path. For example, if `RAGIE_BASE_URL` is `https://api.ragie.ai/` and the path is rewritten to `/mcp/soc2/retrieve`, the final URL will be `https://api.ragie.ai/mcp/soc2/retrieve`.
 
 ### Per-Organization API Keys
 

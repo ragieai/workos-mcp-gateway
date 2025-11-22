@@ -10,7 +10,7 @@ export interface BaseConfig {
   logLevel: "debug" | "info" | "warn" | "error";
   logFormat: "json" | "pretty";
   ragieApiKey: string;
-  ragieMcpServerUrl: string;
+  ragieBaseUrl: string;
   workosApiKey: string;
   workosAuthorizationServerUrl: string;
   workosClientId: string;
@@ -63,7 +63,7 @@ export function getConfigFromEnv(): GatewayConfig {
     LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
     LOG_FORMAT: z.enum(["json", "pretty"]).default("pretty"),
     RAGIE_API_KEY: z.string(),
-    RAGIE_MCP_SERVER_URL: z.string(),
+    RAGIE_BASE_URL: z.string().default("https://api.ragie.ai/"),
     WORKOS_API_KEY: z.string(),
     WORKOS_AUTHORIZATION_SERVER_URL: z.string(),
     WORKOS_CLIENT_ID: z.string(),
@@ -83,7 +83,7 @@ export function getConfigFromEnv(): GatewayConfig {
     logLevel: env.LOG_LEVEL,
     logFormat: env.LOG_FORMAT,
     ragieApiKey: env.RAGIE_API_KEY,
-    ragieMcpServerUrl: env.RAGIE_MCP_SERVER_URL,
+    ragieBaseUrl: env.RAGIE_BASE_URL,
     workosApiKey: env.WORKOS_API_KEY,
     workosAuthorizationServerUrl: env.WORKOS_AUTHORIZATION_SERVER_URL,
     workosClientId: env.WORKOS_CLIENT_ID,

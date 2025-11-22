@@ -58,7 +58,7 @@ export class Gateway extends EventEmitter {
       this.strictMappingMiddleware.bind(this),
       this.bearerTokenMiddleware.bind(this),
       createProxyMiddleware<Request<{ organizationId: string }>>({
-        target: this.config.ragieMcpServerUrl,
+        target: this.config.ragieBaseUrl,
         logger: this.logger,
         changeOrigin: true,
         pathRewrite: (_path, req) => {
