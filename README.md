@@ -226,15 +226,15 @@ npx @ragieai/mcp-gateway
 
 ### Protected Endpoints
 
-- `GET /:organizationId/mcp/*` - Proxies requests to Ragie MCP server (requires bearer token)
+- `POST /:organizationId/mcp` - Proxies requests to Ragie MCP server (requires bearer token)
 
 ### Path Rewriting
 
 The gateway rewrites paths when proxying to the Ragie MCP server:
-- Without mapping: `/org_123/mcp/...` → `/mcp/org_123/...` (organization ID is lowercased)
-- With mapping: `/org_123/mcp/...` → `/mcp/soc2/...` (if `org_123` maps to partition `soc2`)
+- Without mapping: `POST /org_123/mcp` → `POST /mcp/org_123/` (organization ID is lowercased, trailing slash added)
+- With mapping: `POST /org_123/mcp` → `POST /mcp/soc2/` (if `org_123` maps to partition `soc2`, trailing slash added)
 
-The gateway constructs the target URL by combining `RAGIE_BASE_URL` with the rewritten path. For example, if `RAGIE_BASE_URL` is `https://api.ragie.ai/` and the path is rewritten to `/mcp/soc2/retrieve`, the final URL will be `https://api.ragie.ai/mcp/soc2/retrieve`.
+The gateway constructs the target URL by combining `RAGIE_BASE_URL` with the rewritten path. For example, if `RAGIE_BASE_URL` is `https://api.ragie.ai/` and the path is rewritten to `/mcp/soc2/`, the final URL will be `https://api.ragie.ai/mcp/soc2/`.
 
 ### Per-Organization API Keys
 
@@ -301,15 +301,18 @@ This gateway is designed to work with AI clients that support bearer token authe
 
 1. Authenticate users with WorkOS to obtain JWT tokens
 2. Include bearer tokens in the `Authorization` header for all requests
-3. Specify the organization ID in the URL path: `/{organizationId}/mcp/*`
+3. Specify the organization ID in the URL path: `POST /{organizationId}/mcp`
 4. Handle 401 responses with WWW-Authenticate headers for authentication errors
 5. Discover OAuth endpoints via `/.well-known/oauth-protected-resource` if needed
 
 ### Example Request
 
 ```bash
-curl -H "Authorization: Bearer <workos-jwt-token>" \
-  https://gateway.example.com/org_123/mcp/retrieve
+curl -X POST \
+  -H "Authorization: Bearer <workos-jwt-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "example query"}' \
+  https://gateway.example.com/org_123/mcp
 ```
 
 ## Multi-Tenant Architecture

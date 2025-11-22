@@ -53,7 +53,7 @@ export class Gateway extends EventEmitter {
       next();
     });
 
-    this.app.use(
+    this.app.post(
       "/:organizationId/mcp",
       this.strictMappingMiddleware.bind(this),
       this.bearerTokenMiddleware.bind(this),
