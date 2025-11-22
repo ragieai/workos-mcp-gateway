@@ -140,6 +140,7 @@ export class Gateway extends EventEmitter {
       userId = payload.sub;
     } catch {
       res.set("WWW-Authenticate", this.wwwAuthenticateHeader).status(401).json({ error: "Invalid bearer token." });
+      return;
     }
     assert(userId, "User ID is required in the JWT payload"); // type narrowing for userId
 
@@ -154,6 +155,7 @@ export class Gateway extends EventEmitter {
     if (response.data.length === 0) {
       this.logger.warn(`User ${userId} is not a member of the organization ${organizationId}`);
       res.set("WWW-Authenticate", this.wwwAuthenticateHeader).status(401).json({ error: "Invalid bearer token." });
+      return;
     }
 
     next();
