@@ -45,6 +45,7 @@
     "http-proxy-middleware": "^3.0.5",
     "jiti": "^2.6.1",
     "jose": "^6.1.0",
+    "winston": "^3.18.3",
     "zod": "^4.1.12"
   },
   "devDependencies": {

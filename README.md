@@ -120,6 +120,7 @@ The gateway requires several environment variables to be configured. You can set
 
 - `PORT`: Server port (defaults to 3000)
 - `LOG_LEVEL`: Logging level - debug, info, warn, or error (defaults to info)
+- `LOG_FORMAT`: Log format - json or pretty (defaults to pretty)
 - `NODE_ENV`: Environment mode (development, production, etc.)
 - `MAPPING_FILE`: Path to a JSON file mapping organization IDs to Ragie partitions (optional)
 - `STRICT_MAPPING`: Enable strict mapping mode - only organizations in the mapping file are allowed (defaults to false, requires `MAPPING_FILE`)
@@ -135,6 +136,7 @@ WORKOS_AUTHORIZATION_SERVER_URL=https://api.workos.com/auth/v1
 WORKOS_CLIENT_ID=your_workos_client_id_here
 PORT=3000
 LOG_LEVEL=info
+LOG_FORMAT=pretty
 NODE_ENV=production
 # Optional: Organization mapping
 # MAPPING_FILE=mapping.json
@@ -209,6 +211,7 @@ RAGIE_MCP_SERVER_URL=https://api.ragie.ai/mcp/default \
 WORKOS_API_KEY=your_workos_key \
 WORKOS_AUTHORIZATION_SERVER_URL=https://api.workos.com/auth/v1 \
 WORKOS_CLIENT_ID=your_client_id \
+LOG_FORMAT=json \
 MAPPING_FILE=mapping.json \
 STRICT_MAPPING=false \
 npx @ragieai/mcp-gateway
@@ -275,7 +278,7 @@ In the example above:
 
 - **Gateway Class**: Main application logic and Express server setup
 - **Configuration**: Environment-based configuration management with Zod validation
-- **Logger**: Structured logging with configurable levels
+- **Logger**: Structured logging with configurable levels and formats (JSON or pretty)
 - **Tests**: Comprehensive test coverage with mocked dependencies
 
 ### Available Scripts

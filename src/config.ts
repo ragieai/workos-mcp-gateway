@@ -1,12 +1,14 @@
 import z from "zod";
 import { readFileSync } from "fs";
 import { resolve } from "path";
-import { Logger } from "./logger.js";
+import { createLogger } from "./logger.js";
+import type winston from "winston";
 
 export interface BaseConfig {
   baseUrl: string;
   port: number;
   logLevel: "debug" | "info" | "warn" | "error";
+  logFormat: "json" | "pretty";
   ragieApiKey: string;
   ragieMcpServerUrl: string;
   workosApiKey: string;
@@ -31,7 +33,7 @@ export interface GatewayConfig extends BaseConfig {
   mapping?: z.infer<typeof MappingSchema>;
 }
 
-function loadMappingFile(filePath: string, logger: Logger): z.infer<typeof MappingSchema> {
+function loadMappingFile(filePath: string, logger: winston.Logger): z.infer<typeof MappingSchema> {
   try {
     const resolvedPath = resolve(filePath);
     logger.info(`Loading mapping file from: ${resolvedPath}`);
@@ -55,12 +57,11 @@ function loadMappingFile(filePath: string, logger: Logger): z.infer<typeof Mappi
 }
 
 export function getConfigFromEnv(): GatewayConfig {
-  const logger = new Logger("Config");
-
   const envVarSchema = z.object({
     BASE_URL: z.string(),
     PORT: z.coerce.number().default(3000),
     LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
+    LOG_FORMAT: z.enum(["json", "pretty"]).default("pretty"),
     RAGIE_API_KEY: z.string(),
     RAGIE_MCP_SERVER_URL: z.string(),
     WORKOS_API_KEY: z.string(),
@@ -80,6 +81,7 @@ export function getConfigFromEnv(): GatewayConfig {
     baseUrl: env.BASE_URL,
     port: env.PORT,
     logLevel: env.LOG_LEVEL,
+    logFormat: env.LOG_FORMAT,
     ragieApiKey: env.RAGIE_API_KEY,
     ragieMcpServerUrl: env.RAGIE_MCP_SERVER_URL,
     workosApiKey: env.WORKOS_API_KEY,
@@ -91,6 +93,8 @@ export function getConfigFromEnv(): GatewayConfig {
   if (env.STRICT_MAPPING && !env.MAPPING_FILE) {
     throw new Error("STRICT_MAPPING=true requires MAPPING_FILE to be specified");
   }
+
+  const logger = createLogger("Config", baseConfig.logLevel, baseConfig.logFormat);
 
   if (env.MAPPING_FILE) {
     const mapping = loadMappingFile(env.MAPPING_FILE, logger);

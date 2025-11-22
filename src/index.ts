@@ -6,19 +6,19 @@
 
 import dotenv from "dotenv";
 import { Gateway } from "./gateway.js";
-import { Logger } from "./logger.js";
+import { createLogger } from "./logger.js";
 import { getConfigFromEnv } from "./config.js";
 
 // Load environment variables
 dotenv.config();
 
-const logger = new Logger("Main");
+const config = getConfigFromEnv();
+const logger = createLogger("Main", config.logLevel, config.logFormat);
 const gracefulShutdown = process.env["NODE_ENV"] === "development" ? false : true;
 
 async function main(): Promise<void> {
   logger.info("Starting MCP Gateway...");
 
-  const config = getConfigFromEnv();
   const gateway = new Gateway(config);
   await gateway.start();
 

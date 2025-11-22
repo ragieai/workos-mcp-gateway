@@ -1,16 +1,17 @@
 import { EventEmitter } from "events";
-import express, { Request, Response, NextFunction } from "express";
+import express, { NextFunction, Request, Response } from "express";
 
 import { WorkOS } from "@workos-inc/node";
-import { Logger } from "./logger.js";
-import { GatewayConfig } from "./config.js";
+import assert from "assert";
 import { Server } from "http";
 import { createProxyMiddleware } from "http-proxy-middleware";
-import { jwtVerify, createRemoteJWKSet } from "jose";
-import assert from "assert";
+import { createRemoteJWKSet, jwtVerify } from "jose";
+import type winston from "winston";
+import { GatewayConfig } from "./config.js";
+import { createLogger } from "./logger.js";
 
 export class Gateway extends EventEmitter {
-  private logger: Logger;
+  private logger: winston.Logger;
   private config: GatewayConfig;
   private isRunning: boolean;
   private app: express.Application;
@@ -24,7 +25,7 @@ export class Gateway extends EventEmitter {
 
     this.config = config;
 
-    this.logger = new Logger("Gateway", this.config.logLevel);
+    this.logger = createLogger("Gateway", this.config.logLevel, this.config.logFormat);
     this.isRunning = false;
     this.server = null;
 
