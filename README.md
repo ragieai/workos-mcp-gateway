@@ -333,22 +333,111 @@ The gateway can be deployed to any platform that supports Node.js:
 
 ### Docker Deployment
 
-```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-COPY dist ./dist
-ENV NODE_ENV=production
-CMD ["node", "dist/index.js"]
+The project includes a production-ready Dockerfile with multi-stage builds for optimal image size and security.
+
+#### Building the Docker Image
+
+Build the Docker image from the project root:
+
+```bash
+docker build -t mcp-gateway .
 ```
 
-### Platform-Specific Guides
+You can also specify a tag with version:
 
-- **Heroku**: Set environment variables in Heroku dashboard and deploy
-- **AWS Lambda**: Use AWS Lambda Node.js runtime with appropriate handler
-- **Kubernetes**: Deploy as a containerized service with ConfigMaps for environment variables
-- **Railway/Render/Fly.io**: Connect your repository and set environment variables
+```bash
+docker build -t mcp-gateway:latest -t mcp-gateway:0.0.2 .
+```
+
+#### Running the Container
+
+Run the container with required environment variables:
+
+```bash
+docker run -d \
+  --name mcp-gateway \
+  -p 3000:3000 \
+  -e RAGIE_API_KEY=your_ragie_api_key_here \
+  -e WORKOS_API_KEY=your_workos_api_key_here \
+  -e WORKOS_AUTHORIZATION_SERVER_URL=https://api.workos.com/auth/v1 \
+  -e WORKOS_CLIENT_ID=your_workos_client_id_here \
+  mcp-gateway
+```
+
+#### Using Environment File
+
+For easier management, you can use a `.env` file with Docker:
+
+```bash
+docker run -d \
+  --name mcp-gateway \
+  -p 3000:3000 \
+  --env-file .env \
+  mcp-gateway
+```
+
+#### Optional Configuration
+
+Include optional environment variables as needed:
+
+```bash
+docker run -d \
+  --name mcp-gateway \
+  -p 3000:3000 \
+  -e RAGIE_API_KEY=your_ragie_api_key_here \
+  -e WORKOS_API_KEY=your_workos_api_key_here \
+  -e WORKOS_AUTHORIZATION_SERVER_URL=https://api.workos.com/auth/v1 \
+  -e WORKOS_CLIENT_ID=your_workos_client_id_here \
+  -e BASE_URL=https://gateway.example.com \
+  -e PORT=3000 \
+  -e LOG_LEVEL=info \
+  -e LOG_FORMAT=json \
+  -e MAPPING_FILE=/app/mapping.json \
+  -e STRICT_MAPPING=false \
+  -v $(pwd)/mapping.json:/app/mapping.json:ro \
+  mcp-gateway
+```
+
+#### Docker Compose
+
+For easier deployment, you can use Docker Compose. Create a `docker-compose.yml`:
+
+```yaml
+version: '3.8'
+
+services:
+  mcp-gateway:
+    build: .
+    container_name: mcp-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - RAGIE_API_KEY=${RAGIE_API_KEY}
+      - WORKOS_API_KEY=${WORKOS_API_KEY}
+      - WORKOS_AUTHORIZATION_SERVER_URL=${WORKOS_AUTHORIZATION_SERVER_URL}
+      - WORKOS_CLIENT_ID=${WORKOS_CLIENT_ID}
+      - BASE_URL=${BASE_URL:-http://localhost:3000}
+      - PORT=3000
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_FORMAT=${LOG_FORMAT:-pretty}
+      - MAPPING_FILE=${MAPPING_FILE:-}
+      - STRICT_MAPPING=${STRICT_MAPPING:-false}
+    volumes:
+      - ./mapping.json:/app/mapping.json:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/.well-known/oauth-protected-resource"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+```
+
+Then run:
+
+```bash
+docker-compose up -d
+```
 
 ## License
 
