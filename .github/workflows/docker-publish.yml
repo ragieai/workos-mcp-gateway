@@ -51,3 +51,24 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Make package public
+        run: |
+          PACKAGE_NAME="mcp-gateway"
+          OWNER="${{ github.repository_owner }}"
+          PACKAGE_ENCODED="${OWNER}%2F${PACKAGE_NAME}"
+
+          # GitHub Container Registry requires a separate API call to set visibility
+          # Retry logic to handle package creation delay
+          for i in {1..5}; do
+            if gh api -X PATCH "/user/packages/container/${PACKAGE_ENCODED}" -f visibility=public 2>/dev/null; then
+              echo "Package set to public"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying..."
+            sleep 1
+          done
+          echo "Warning: Could not set package to public automatically. Please set manually in GitHub."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
