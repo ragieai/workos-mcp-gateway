@@ -1,4 +1,5 @@
 import type { Config } from "jest";
+import path from "path";
 
 const config: Config = {
   preset: "ts-jest/presets/default-esm",
@@ -7,10 +8,26 @@ const config: Config = {
   roots: ["<rootDir>/src"],
   testMatch: ["**/__tests__/**/*.ts", "**/?(*.)+(spec|test).ts"],
   transform: {
-    "^.+\\.ts$": [
+    "^.+\\.(ts|tsx)$": [
       "ts-jest",
       {
         useESM: true,
+        diagnostics: {
+          ignoreCodes: [1343],
+        },
+        // This is a workaround to allow the use of import.meta.url in the tests
+        astTransformers: {
+          before: [
+            {
+              path: "node_modules/ts-jest-mock-import-meta", // or, alternatively, 'ts-jest-mock-import-meta' directly, without node_modules.
+              options: {
+                metaObjectReplacement: {
+                  url: "file://" + path.join(__dirname, "src", "__tests__"),
+                },
+              },
+            },
+          ],
+        },
       },
     ],
   },

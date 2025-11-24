@@ -14,8 +14,8 @@ import expressWinston from "express-winston";
 import { GatewayConfig } from "./config.js";
 import { createLogger } from "./logger.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const _filename = fileURLToPath(import.meta.url);
+const _dirname = dirname(_filename);
 
 export class Gateway extends EventEmitter {
   private logger: winston.Logger;
@@ -51,7 +51,7 @@ export class Gateway extends EventEmitter {
 
     this.workosJwks = createRemoteJWKSet(new URL(this.config.workosAuthorizationServerUrl + "/oauth2/jwks"));
 
-    const templatePath = join(__dirname, "templates", "welcome.html");
+    const templatePath = join(_dirname, "templates", "welcome.html");
     this.welcomeTemplate = readFileSync(templatePath, "utf-8");
 
     this.app = express();
