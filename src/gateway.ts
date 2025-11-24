@@ -10,6 +10,7 @@ import { Server } from "http";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import type winston from "winston";
+import expressWinston from "express-winston";
 import { GatewayConfig } from "./config.js";
 import { createLogger } from "./logger.js";
 
@@ -58,10 +59,25 @@ export class Gateway extends EventEmitter {
   }
 
   private initializeApp(): void {
-    this.app.use((req: Request, _res: Response, next: NextFunction) => {
-      this.logger.debug(`Incoming request: ${req.method} ${req.url}`);
-      next();
-    });
+    // Request/response logging middleware
+    this.app.use(
+      expressWinston.logger({
+        winstonInstance: this.logger,
+        meta: true,
+        level: (req: Request, res: Response) => {
+          if (res.statusCode >= 500) {
+            return "error";
+          } else if (res.statusCode >= 400) {
+            return "warn";
+          }
+          return "info";
+        },
+        colorize: this.config.logFormat === "pretty",
+        msg: "{{req.method}} {{req.path}} {{res.statusCode}} {{res.responseTime}}ms",
+        requestWhitelist: ["path", "method", "httpVersion"],
+        responseWhitelist: ["statusCode", "responseTime"],
+      })
+    );
 
     this.app.get("/welcome", (req: Request, res: Response) => {
       res.status(200).send(this.welcomeTemplate);
