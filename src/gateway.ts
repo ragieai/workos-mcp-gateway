@@ -3,12 +3,18 @@ import express, { NextFunction, Request, Response } from "express";
 
 import { WorkOS } from "@workos-inc/node";
 import assert from "assert";
+import { readFileSync } from "fs";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
 import { Server } from "http";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import type winston from "winston";
 import { GatewayConfig } from "./config.js";
 import { createLogger } from "./logger.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export class Gateway extends EventEmitter {
   private logger: winston.Logger;
@@ -19,6 +25,7 @@ export class Gateway extends EventEmitter {
   private workos: WorkOS;
   private wwwAuthenticateHeader: string;
   private workosJwks: ReturnType<typeof createRemoteJWKSet>;
+  private welcomeTemplate: string;
 
   constructor(config: GatewayConfig, workos: WorkOS | null = null) {
     super();
@@ -43,6 +50,9 @@ export class Gateway extends EventEmitter {
 
     this.workosJwks = createRemoteJWKSet(new URL(this.config.workosAuthorizationServerUrl + "/oauth2/jwks"));
 
+    const templatePath = join(__dirname, "templates", "welcome.html");
+    this.welcomeTemplate = readFileSync(templatePath, "utf-8");
+
     this.app = express();
     this.initializeApp();
   }
@@ -51,6 +61,10 @@ export class Gateway extends EventEmitter {
     this.app.use((req: Request, _res: Response, next: NextFunction) => {
       this.logger.debug(`Incoming request: ${req.method} ${req.url}`);
       next();
+    });
+
+    this.app.get("/welcome", (req: Request, res: Response) => {
+      res.status(200).send(this.welcomeTemplate);
     });
 
     this.app.post(
