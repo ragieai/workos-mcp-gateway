@@ -3,36 +3,38 @@ import express, { NextFunction, Request, Response } from "express";
 
 import { WorkOS } from "@workos-inc/node";
 import assert from "assert";
+import expressWinston from "express-winston";
 import { readFileSync } from "fs";
-import { dirname, join } from "path";
-import { fileURLToPath } from "url";
 import { Server } from "http";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { createRemoteJWKSet, jwtVerify } from "jose";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
 import type winston from "winston";
-import expressWinston from "express-winston";
-import { GatewayConfig } from "./config.js";
+import { Config } from "./config.js";
 import { createLogger } from "./logger.js";
+import type { Mapper } from "./mapping.js";
 
 const _filename = fileURLToPath(import.meta.url);
 const _dirname = dirname(_filename);
 
 export class Gateway extends EventEmitter {
   private logger: winston.Logger;
-  private config: GatewayConfig;
+  private config: Config;
   private isRunning: boolean;
   private app: express.Application;
+  private mapper: Mapper;
   private server: Server | null;
   private workos: WorkOS;
   private wwwAuthenticateHeader: string;
   private workosJwks: ReturnType<typeof createRemoteJWKSet>;
   private welcomeTemplate: string;
 
-  constructor(config: GatewayConfig, workos: WorkOS | null = null) {
+  constructor(config: Config, mapper: Mapper, workos: WorkOS | null = null) {
     super();
 
     this.config = config;
-
+    this.mapper = mapper;
     this.logger = createLogger("Gateway", this.config.logLevel, this.config.logFormat);
     this.isRunning = false;
     this.server = null;
@@ -85,33 +87,20 @@ export class Gateway extends EventEmitter {
 
     this.app.post(
       "/:organizationId/mcp",
-      this.strictMappingMiddleware.bind(this),
+      this.ensureMappingMiddleware.bind(this),
       this.bearerTokenMiddleware.bind(this),
       createProxyMiddleware<Request<{ organizationId: string }>>({
         target: this.config.ragieBaseUrl,
         logger: this.logger,
         changeOrigin: true,
         pathRewrite: (_path, req) => {
-          const organizationId = req.params.organizationId;
-          const mapping = this.config.mapping?.[organizationId];
-          if (mapping) {
-            this.logger.debug(`Using mapping for organization ${organizationId}: ${mapping.partition}`);
-            return `/mcp/${mapping.partition}/`;
-          } else {
-            return `/mcp/${organizationId.toLowerCase()}/`;
-          }
+          const partition = this.mapper.getPartition(req.params.organizationId);
+          return `/mcp/${partition}/`;
         },
         on: {
           proxyReq: (proxyReq, req) => {
-            const organizationId = req.params.organizationId;
-            const mapping = this.config.mapping?.[organizationId];
-            if (mapping?.apiKey) {
-              this.logger.debug(`Using API key for organization ${organizationId}`);
-              proxyReq.setHeader("Authorization", `Bearer ${mapping.apiKey}`);
-            } else {
-              this.logger.debug(`Using default Ragie API key for organization ${organizationId}`);
-              proxyReq.setHeader("Authorization", `Bearer ${this.config.ragieApiKey}`);
-            }
+            const apiKey = this.mapper.getApiKey(req.params.organizationId);
+            proxyReq.setHeader("Authorization", `Bearer ${apiKey}`);
           },
         },
       })
@@ -135,16 +124,9 @@ export class Gateway extends EventEmitter {
     });
   }
 
-  strictMappingMiddleware(req: Request<{ organizationId: string }>, res: Response, next: NextFunction) {
-    if (!this.config.strictMapping) {
-      next();
-      return;
-    }
-
-    const organizationId = req.params.organizationId;
-    const hasMapping = this.config.mapping?.[organizationId];
-    if (!hasMapping) {
-      this.logger.warn(`No mapping found for organization ${organizationId} and strict mapping is enabled`);
+  ensureMappingMiddleware(req: Request<{ organizationId: string }>, res: Response, next: NextFunction) {
+    if (!this.mapper.hasMapping(req.params.organizationId)) {
+      this.logger.warn(`No mapping found for organization ${req.params.organizationId}`);
       res.status(404).json({ error: "Organization not found" });
       return;
     }
@@ -250,7 +232,7 @@ export class Gateway extends EventEmitter {
     });
   }
 
-  getConfig(): GatewayConfig {
+  getConfig(): Config {
     return { ...this.config };
   }
 

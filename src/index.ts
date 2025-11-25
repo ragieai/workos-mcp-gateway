@@ -8,6 +8,8 @@ import dotenv from "dotenv";
 import { Gateway } from "./gateway.js";
 import { createLogger } from "./logger.js";
 import { getConfigFromEnv } from "./config.js";
+import { loadMapper, Mapper } from "./mapping.js";
+import assert from "assert";
 
 // Load environment variables
 dotenv.config();
@@ -17,7 +19,16 @@ const logger = createLogger("Main", config.logLevel, config.logFormat);
 const gracefulShutdown = process.env["NODE_ENV"] === "development" ? false : true;
 
 async function main(): Promise<void> {
-  const gateway = new Gateway(config);
+  let mapper: Mapper;
+  try {
+    mapper = loadMapper(config);
+  } catch (e) {
+    assert(e instanceof Error, "Expected error to be an instance of Error");
+    logger.error("Could not load mapper: " + e.message);
+    process.exit(1);
+  }
+
+  const gateway = new Gateway(config, mapper);
   await gateway.start();
 
   logger.info("MCP Gateway started successfully");

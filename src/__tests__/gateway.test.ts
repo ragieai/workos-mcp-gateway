@@ -3,23 +3,32 @@
  */
 
 import { Gateway } from "../gateway.js";
+import { DefaultMapper, MapperConfig } from "../mapping.js";
 
 describe("Gateway", () => {
   let gateway: Gateway;
 
   beforeEach(() => {
-    gateway = new Gateway({
-      baseUrl: "http://localhost:3000",
-      port: 3002,
-      logLevel: "error", // Reduce log noise during tests
-      logFormat: "pretty",
+    const mapperConfig: MapperConfig = {
       ragieApiKey: "ragie_api_key",
-      ragieBaseUrl: "ragie_mcp_server_url",
-      workosApiKey: "workos_api_key",
-      workosAuthorizationServerUrl: "https://placeholder.authkit.app",
-      workosClientId: "workos_client_id",
-      strictMapping: false,
-    });
+      strictApiKeys: false,
+    };
+    gateway = new Gateway(
+      {
+        ...mapperConfig,
+        baseUrl: "http://localhost:3000",
+        port: 3002,
+        logLevel: "error", // Reduce log noise during tests
+        logFormat: "pretty",
+        ragieBaseUrl: "ragie_mcp_server_url",
+        workosApiKey: "workos_api_key",
+        workosAuthorizationServerUrl: "https://placeholder.authkit.app",
+        workosClientId: "workos_client_id",
+        strictMapping: false,
+        mappingFile: undefined,
+      },
+      new DefaultMapper(mapperConfig, {})
+    );
   });
 
   afterEach(async () => {

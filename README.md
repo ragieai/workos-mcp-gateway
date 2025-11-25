@@ -124,6 +124,7 @@ The gateway requires several environment variables to be configured. You can set
 - `RAGIE_BASE_URL`: Ragie API base URL (defaults to `https://api.ragie.ai/`)
 - `MAPPING_FILE`: Path to a JSON file mapping organization IDs to Ragie partitions (optional)
 - `STRICT_MAPPING`: Enable strict mapping mode - only organizations in the mapping file are allowed (defaults to false, requires `MAPPING_FILE`)
+- `STRICT_API_KEYS`: Enable strict API key handling - requires all mappings to have an `apiKey` field (defaults to false, see Per-Organization API Keys section for details)
 
 ### Example `.env` File
 
@@ -145,6 +146,7 @@ NODE_ENV=production
 # Optional: Organization mapping
 # MAPPING_FILE=mapping.json
 # STRICT_MAPPING=false
+# STRICT_API_KEYS=false
 ```
 
 ## Usage
@@ -179,7 +181,7 @@ Each organization mapping can include:
 - `partition` (required): The Ragie partition name to route to
 - `apiKey` (optional): A custom Ragie API key for this organization. If not provided, the default `RAGIE_API_KEY` will be used.
 
-Set the `MAPPING_FILE` environment variable to enable mapping:
+Set the `MAPPING_FILE` environment variable to enable mapping. The path can be absolute or relative to the current working directory:
 
 ```bash
 MAPPING_FILE=mapping.json npx @ragieai/mcp-gateway
@@ -190,6 +192,8 @@ Or in your `.env` file:
 ```bash
 MAPPING_FILE=mapping.json
 ```
+
+**Note:** The mapping file is loaded once at startup. If the file cannot be read or contains invalid JSON, the gateway will fail to start with an error. Changes to the mapping file require restarting the gateway to take effect.
 
 ### Strict Mapping Mode
 
@@ -217,6 +221,7 @@ WORKOS_CLIENT_ID=your_client_id \
 LOG_FORMAT=json \
 MAPPING_FILE=mapping.json \
 STRICT_MAPPING=false \
+STRICT_API_KEYS=false \
 npx @ragieai/mcp-gateway
 ```
 
@@ -255,9 +260,42 @@ When using organization mapping, you can optionally specify a custom Ragie API k
 }
 ```
 
-In the example above:
-- `org_A1A1A1A1A1A1A1A1A1A1A1A1A1` will use its custom API key
-- `org_B2B2B2B2B2B2B2B2B2B2B2B2B2` will use the default `RAGIE_API_KEY` from environment variables
+**Default Behavior (`STRICT_API_KEYS=false`):**
+- Organizations with an `apiKey` in the mapping will use that key
+- Organizations without an `apiKey` in the mapping will fall back to the default `RAGIE_API_KEY` from environment variables
+- In the example above:
+  - `org_A1A1A1A1A1A1A1A1A1A1A1A1A1` will use its custom API key
+  - `org_B2B2B2B2B2B2B2B2B2B2B2B2B2` will use the default `RAGIE_API_KEY` from environment variables
+
+**Strict API Key Mode (`STRICT_API_KEYS=true`):**
+When strict API key mode is enabled, all organization mappings must include an `apiKey` field:
+
+- **With `STRICT_MAPPING=true`**: All mappings must have `apiKey`, and `RAGIE_API_KEY` is not used (can be omitted)
+- **With `STRICT_MAPPING=false`**: All mappings in the file must have `apiKey`, but `RAGIE_API_KEY` can still be set for fallback when an organization is not found in the mapping file
+
+If a mapping entry is missing an `apiKey` when `STRICT_API_KEYS=true`, the gateway will fail to start with a validation error.
+
+Example with strict API keys:
+
+```json
+{
+  "org_A1A1A1A1A1A1A1A1A1A1A1A1A1": {
+    "partition": "soc2",
+    "apiKey": "ragie_api_key_for_org_1"
+  },
+  "org_B2B2B2B2B2B2B2B2B2B2B2B2B2": {
+    "partition": "custom-partition",
+    "apiKey": "ragie_api_key_for_org_2"
+  }
+}
+```
+
+Enable strict API keys in your `.env` file:
+
+```bash
+MAPPING_FILE=mapping.json
+STRICT_API_KEYS=true
+```
 
 ## Authentication Flow
 
@@ -394,6 +432,7 @@ docker run -d \
   -e LOG_FORMAT=json \
   -e MAPPING_FILE=/app/mapping.json \
   -e STRICT_MAPPING=false \
+  -e STRICT_API_KEYS=false \
   -v $(pwd)/mapping.json:/app/mapping.json:ro \
   mcp-gateway
 ```
@@ -422,6 +461,7 @@ services:
       - LOG_FORMAT=${LOG_FORMAT:-pretty}
       - MAPPING_FILE=${MAPPING_FILE:-}
       - STRICT_MAPPING=${STRICT_MAPPING:-false}
+      - STRICT_API_KEYS=${STRICT_API_KEYS:-false}
     volumes:
       - ./mapping.json:/app/mapping.json:ro
     restart: unless-stopped
